@@ -9,28 +9,23 @@ import userRouter from "./routes/userRoute.js";
 const app = express();
 const port = process.env.PORT || 4000;
 
-// Connect to database
 connectDB();
 
-// ✅ Updated frontend URL
 app.use(cors({
-  origin: ["https://authsystemfrontend-wt73.onrender.com"],
-  credentials: true
+  origin: "https://authsystemfrontend-wt73.onrender.com",  // ✅ no trailing slash
+  credentials: true,
 }));
 
 app.use(express.json());
 app.use(cookieParser());
 
-// Test route
 app.get("/", (req, res) => {
-  res.send("API is Working !");
+  res.send("API is Working!");
 });
 
-// Routes
-app.use("/api/auth", authRouter);
-app.use("/api/user", userRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/user', userRouter);
 
-// Server
 app.listen(port, () => {
-  console.log(`Server started on Port: ${port}`);
+  console.log(`✅ Server started on Port: ${port}`);
 });
