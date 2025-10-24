@@ -11,11 +11,15 @@ const port = process.env.PORT || 4000;
 
 connectDB();
 
+// ✅ Proper CORS setup
 app.use(cors({
-  origin: "https://authsystem-epkj.onrender.com",
+  origin: [
+    "https://authsystem-epkj.onrender.com",  // your live frontend
+    "http://localhost:5173"                  // for local development (optional)
+  ],
   credentials: true,
 }));
-app.options("*", cors());
+
 app.use(express.json());
 app.use(cookieParser());
 
@@ -23,8 +27,8 @@ app.get("/", (req, res) => {
   res.send("API is Working!");
 });
 
-app.use('/api/auth', authRouter);
-app.use('/api/user', userRouter);
+app.use("/api/auth", authRouter);
+app.use("/api/user", userRouter);
 
 app.listen(port, () => {
   console.log(`✅ Server started on Port: ${port}`);
