@@ -12,9 +12,10 @@ const port = process.env.PORT || 4000;
 connectDB();
 
 app.use(cors({
-  origin: "https://authsystemfrontend-wt73.onrender.com",  // ✅ no trailing slash
+  origin: "https://authsystem-epkj.onrender.com",
   credentials: true,
 }));
+app.options("*", cors()); // ✅ handle preflight requests
 
 app.use(express.json());
 app.use(cookieParser());
