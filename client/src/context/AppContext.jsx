@@ -5,17 +5,17 @@ import { toast } from "react-toastify";
 export const AppContent = createContext();
 
 export const AppContextProvider = (props) => {
+  // ✅ Corrected property
+  axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL;
+  axios.defaults.withCredentials = true; // ✅ Optional but recommended
 
-  axios.defaultsUrl = import.meta.env.VITE_BACKEND_URL
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
   const [isLoggedin, setIsLoggedin] = useState(false);
-  const [userData, setUserData] = useState(false); // ✅ Fixed: capital U
+  const [userData, setUserData] = useState(false);
 
   const getAuthState = async () => {
     try {
-      const { data } = await axios.get(backendUrl + "/api/auth/is-auth", {
-        withCredentials: true,
-      });
+      const { data } = await axios.get("/api/auth/is-auth");
       if (data.success) {
         setIsLoggedin(true);
         getUserData();
@@ -31,9 +31,7 @@ export const AppContextProvider = (props) => {
 
   const getUserData = async () => {
     try {
-      const { data } = await axios.get(backendUrl + "/api/user/data", {
-        withCredentials: true,
-      });
+      const { data } = await axios.get("/api/user/data");
       data.success
         ? setUserData(data.userData)
         : toast.error(data.message);
@@ -47,7 +45,7 @@ export const AppContextProvider = (props) => {
     isLoggedin,
     setIsLoggedin,
     userData,
-    setUserData, // ✅ Fixed
+    setUserData,
     getUserData,
   };
 
