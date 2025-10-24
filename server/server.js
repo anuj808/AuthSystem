@@ -11,14 +11,25 @@ const port = process.env.PORT || 4000;
 
 connectDB();
 
-// ✅ Proper CORS setup
+const allowedOrigins = [
+  "https://authsystem-epkj.onrender.com", // ✅ your frontend
+  "http://localhost:5173"                 // ✅ for local dev
+];
+
 app.use(cors({
-  origin: [
-    "https://authsystem-epkj.onrender.com",  // your live frontend
-    "http://localhost:5173"                  // for local development (optional)
-  ],
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 }));
+
+app.options("*", cors());
 
 app.use(express.json());
 app.use(cookieParser());
