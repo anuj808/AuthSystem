@@ -15,8 +15,7 @@ app.use(cors({
   origin: "https://authsystem-epkj.onrender.com",
   credentials: true,
 }));
-app.options("*", cors()); // ✅ handle preflight requests
-
+app.options("*", cors());
 app.use(express.json());
 app.use(cookieParser());
 
