@@ -15,8 +15,8 @@ connectDB();
 
 // ✅ Proper CORS setup
 app.use(cors({
-  origin: [  // your live frontend
-    FRONTEND                 // for local development (optional)
+  origin: [  
+    FRONTEND 
   ],
   credentials: true,
 }));
