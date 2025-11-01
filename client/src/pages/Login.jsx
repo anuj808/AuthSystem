@@ -6,7 +6,10 @@ import { toast, ToastContainer } from "react-toastify";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { backendUrl, setIsLoggedin, getUserData } = useContext(AppContent);
+  const { setIsLoggedin, getUserData } = useContext(AppContent);
+
+  // Normalize backend URL to remove trailing slash
+  const backendUrl = import.meta.env.VITE_BACKEND_URL.replace(/\/+$/, "");
 
   const [state, setState] = useState("Sign Up");
   const [name, setName] = useState("");
@@ -17,6 +20,7 @@ const Login = () => {
     e.preventDefault();
     try {
       axios.defaults.withCredentials = true;
+
       if (state === "Sign Up") {
         const { data } = await axios.post(`${backendUrl}/api/auth/register`, {
           name,
@@ -26,8 +30,8 @@ const Login = () => {
 
         if (data.success) {
           setIsLoggedin(true);
-          navigate("/");
           getUserData();
+          navigate("/");
         } else {
           toast.error(data.message);
         }
@@ -46,14 +50,13 @@ const Login = () => {
         }
       }
     } catch (error) {
-      toast.error(error.message);
+      toast.error(error.response?.data?.message || error.message);
     }
   };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-[#0d1c1f] px-4 sm:px-6">
       <div className="bg-[#12292e] rounded-2xl shadow-2xl p-6 sm:p-8 w-full max-w-sm sm:max-w-md text-center text-white">
-        {/* Heading */}
         <h2 className="text-2xl sm:text-3xl font-semibold text-teal-400 mb-2">
           {state === "Sign Up" ? "Create Account" : "Login"}
         </h2>
@@ -63,7 +66,6 @@ const Login = () => {
             : "Login to your account!"}
         </p>
 
-        {/* Form */}
         <form className="space-y-4" onSubmit={onSubmitHandler}>
           {state === "Sign Up" && (
             <div className="flex items-center gap-3 w-full px-4 sm:px-5 py-2.5 rounded-full bg-[#1b3a3f]">
@@ -100,7 +102,6 @@ const Login = () => {
             />
           </div>
 
-          {/* Forgot Password */}
           {state === "Login" && (
             <div className="text-right -mt-2">
               <button
@@ -121,7 +122,6 @@ const Login = () => {
           </button>
         </form>
 
-        {/* Toggle between Sign Up / Login */}
         <p className="mt-4 text-gray-400 text-sm sm:text-base">
           {state === "Sign Up"
             ? "Already have an account?"
