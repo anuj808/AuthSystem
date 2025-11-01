@@ -15,8 +15,7 @@ connectDB();
 
 // ✅ Proper CORS setup
 app.use(cors({
-  origin: [
-    "https://authsystem-epkj.onrender.com",  // your live frontend
+  origin: [  // your live frontend
     FRONTEND                 // for local development (optional)
   ],
   credentials: true,
