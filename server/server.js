@@ -6,8 +6,10 @@ import connectDB from "./config/mongodb.js";
 import authRouter from "./routes/authroute.js";
 import userRouter from "./routes/userRoute.js";
 
+
 const app = express();
 const port = process.env.PORT || 4000;
+const FRONTEND=process.env.FRONTEND_URL
 
 connectDB();
 
@@ -15,7 +17,7 @@ connectDB();
 app.use(cors({
   origin: [
     "https://authsystem-epkj.onrender.com",  // your live frontend
-    "http://localhost:5173"                  // for local development (optional)
+    FRONTEND                 // for local development (optional)
   ],
   credentials: true,
 }));
