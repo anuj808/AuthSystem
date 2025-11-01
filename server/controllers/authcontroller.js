@@ -156,7 +156,7 @@ export const verifyEmail = async(req, res)=>{
  }
  }
 
- export const isAuthnecticated= async(req , res)=>{
+ export const isAuthenticated= async(req , res)=>{
       try {
         return res.json({success:true});
       } catch (error) {
