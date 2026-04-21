@@ -2,6 +2,8 @@ import { useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 
+const backendUrl = import.meta.env.VITE_BACKEND_URL.replace(/\/+$/, "");
+
 const Contact = () => {
   const [formData, setFormData] = useState({
     name: "",
@@ -16,10 +18,7 @@ const Contact = () => {
     e.preventDefault();
 
     try {
-      const res = await axios.post(
-        "http://localhost:4000/api/contact/send",
-        formData
-      );
+      const res = await axios.post(`${backendUrl}/api/contact/send`, formData);
       toast.success(res.data.message);
       setFormData({ name: "", email: "", message: "" });
     } catch {

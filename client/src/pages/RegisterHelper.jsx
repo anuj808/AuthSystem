@@ -4,6 +4,8 @@ import { toast } from "react-toastify";
 import { AppContent } from "../context/AppContext";
 import { useNavigate } from "react-router-dom";
 
+const backendUrl = import.meta.env.VITE_BACKEND_URL.replace(/\/+$/, "");
+
 const services = [
   "Plumber",
   "Electrician",
@@ -48,7 +50,7 @@ const RegisterHelper = () => {
 
     try {
       const res = await axios.post(
-        "http://localhost:4000/api/helpers/register",
+        `${backendUrl}/api/helpers/register`,
         formData,
         {
           headers: {

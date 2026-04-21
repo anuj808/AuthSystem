@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 
+const backendUrl = import.meta.env.VITE_BACKEND_URL.replace(/\/+$/, "");
+
 const AdminDashboard = () => {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
@@ -13,7 +15,7 @@ const AdminDashboard = () => {
 
   const fetchPendingHelpers = async () => {
     try {
-      const res = await axios.get("http://localhost:4000/api/admin/helpers/pending");
+      const res = await axios.get(`${backendUrl}/api/admin/helpers/pending`);
       if (res.data.success) {
         setPendingHelpers(res.data.helpers);
       }
@@ -24,7 +26,7 @@ const AdminDashboard = () => {
 
   const fetchContacts = async () => {
     try {
-      const res = await axios.get("http://localhost:4000/api/admin/contacts");
+      const res = await axios.get(`${backendUrl}/api/admin/contacts`);
       if (res.data.success) {
         setContacts(res.data.contacts);
       }
@@ -35,7 +37,7 @@ const AdminDashboard = () => {
 
   const updateHelperStatus = async (email, status) => {
     try {
-      const res = await axios.post("http://localhost:4000/api/admin/helpers/status", {
+      const res = await axios.post(`${backendUrl}/api/admin/helpers/status`, {
         email,
         status,
       });

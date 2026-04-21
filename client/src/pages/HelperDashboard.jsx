@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
+const backendUrl = import.meta.env.VITE_BACKEND_URL.replace(/\/+$/, "");
+
 const HelperDashboard = () => {
   const [isOnline, setIsOnline] = useState(false);
   const [earnings, setEarnings] = useState(1250);
@@ -21,7 +23,7 @@ const HelperDashboard = () => {
     if (isOnline) {
       pollingInterval = setInterval(async () => {
         try {
-          const res = await axios.get("http://localhost:4000/api/jobs/available");
+          const res = await axios.get(`${backendUrl}/api/jobs/available`);
           if (res.data.success) {
             // Find jobs we haven't seen or that are pending
             const newRequests = res.data.jobs.map(job => ({
@@ -59,7 +61,7 @@ const HelperDashboard = () => {
 
   const handleAccept = async (id, price) => {
     try {
-      const res = await axios.post("http://localhost:4000/api/jobs/accept", {
+      const res = await axios.post(`${backendUrl}/api/jobs/accept`, {
         jobId: id,
         helperName: "Premium Checked Helper", // Could be grabbed from context logic
       });

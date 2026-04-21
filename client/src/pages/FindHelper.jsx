@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 
+const backendUrl = import.meta.env.VITE_BACKEND_URL.replace(/\/+$/, "");
+
 const FindHelper = () => {
   const locationData = useLocation();
   const navigate = useNavigate();
@@ -26,7 +28,7 @@ const FindHelper = () => {
   useEffect(() => {
     const createLiveRequest = async () => {
       try {
-        const res = await axios.post("http://localhost:4000/api/jobs/create", {
+        const res = await axios.post(`${backendUrl}/api/jobs/create`, {
           serviceCategory: service || "General Help",
           location: location || "Your Location",
           userName: "Guest User",
@@ -59,7 +61,7 @@ const FindHelper = () => {
 
     const checkStatus = async () => {
       try {
-        const res = await axios.get(`http://localhost:4000/api/jobs/status/${activeJobId}`);
+        const res = await axios.get(`${backendUrl}/api/jobs/status/${activeJobId}`);
         if (res.data.success && res.data.job.status === "accepted") {
           setHelperMatch(res.data.job);
           setSearching(false);
@@ -78,7 +80,7 @@ const FindHelper = () => {
   const handleIncreaseFare = async () => {
     if (!activeJobId) return;
     try {
-      const res = await axios.put(`http://localhost:4000/api/jobs/increase/${activeJobId}`, { amount: 50 });
+      const res = await axios.put(`${backendUrl}/api/jobs/increase/${activeJobId}`, { amount: 50 });
       if (res.data.success) {
         setCurrentFare(res.data.job.price);
       }
@@ -103,7 +105,7 @@ const FindHelper = () => {
     if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
     if (activeJobId) {
       try {
-        await axios.put(`http://localhost:4000/api/jobs/cancel/${activeJobId}`);
+        await axios.put(`${backendUrl}/api/jobs/cancel/${activeJobId}`);
       } catch (err) {
         console.error("Failed to cancel job", err);
       }
