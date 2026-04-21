@@ -10,7 +10,8 @@ const userSchema = new mongoose.Schema({
     isAccountVerified: {type: Boolean ,default:false},
     resetOtp: {type: String ,default:''},
     resetOtpExpireAt: {type: Number ,default:0},
-
+    isHelper: {type: Boolean, default: false},
+    helperVerificationStatus: {type: String, enum: ['none', 'pending', 'verified', 'rejected'], default: 'none'},
 })
 
 const userModel =mongoose.model.user || mongoose.model('user',userSchema) 
