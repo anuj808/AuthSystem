@@ -1,9 +1,13 @@
-import React from "react";
+import React, { useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaUser, FaTools } from "react-icons/fa";
+import { AppContent } from "../context/AppContext";
 
 const RegisterSection = () => {
   const navigate = useNavigate();
+  const { userData } = useContext(AppContent);
+
+  if (userData) return null;
 
   return (
     <section className="w-full bg-transparent py-20 text-white">

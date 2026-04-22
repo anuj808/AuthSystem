@@ -11,6 +11,7 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("helpers");
   const [pendingHelpers, setPendingHelpers] = useState([]);
   const [contacts, setContacts] = useState([]);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const fetchPendingHelpers = async () => {
@@ -32,6 +33,17 @@ const AdminDashboard = () => {
       }
     } catch (err) {
       toast.error("Failed to fetch contacts");
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      const res = await axios.get(`${backendUrl}/api/admin/stats`);
+      if (res.data.success) {
+        setStats(res.data.stats);
+      }
+    } catch (err) {
+      toast.error("Failed to fetch stats");
     }
   };
 
@@ -58,6 +70,8 @@ const AdminDashboard = () => {
       fetchPendingHelpers().then(() => setLoading(false));
     } else if (activeTab === "contacts") {
       fetchContacts().then(() => setLoading(false));
+    } else if (activeTab === "overview") {
+      fetchStats().then(() => setLoading(false));
     }
   }, [activeTab, isAdminAuthenticated]);
 
@@ -158,33 +172,57 @@ const AdminDashboard = () => {
                 <h2 className="text-2xl font-bold text-teal-400">Platform Analytics</h2>
                 <p className="text-gray-400 mt-1">Key metrics and statistics of Servicio.</p>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                 <div className="bg-[#12292e] p-6 rounded-2xl border border-teal-900/40">
-                    <div className="text-4xl mb-3">👥</div>
-                    <div className="text-sm text-gray-400 font-semibold uppercase tracking-widest">Total Users</div>
-                    <div className="text-3xl font-bold text-white mt-1">14,204</div>
-                 </div>
-                 <div className="bg-[#12292e] p-6 rounded-2xl border border-teal-900/40">
-                    <div className="text-4xl mb-3">🛠️</div>
-                    <div className="text-sm text-gray-400 font-semibold uppercase tracking-widest">Active Helpers</div>
-                    <div className="text-3xl font-bold text-teal-400 mt-1">2,845</div>
-                 </div>
-                 <div className="bg-[#12292e] p-6 rounded-2xl border border-teal-900/40">
-                    <div className="text-4xl mb-3">💸</div>
-                    <div className="text-sm text-gray-400 font-semibold uppercase tracking-widest">Total Payouts</div>
-                    <div className="text-3xl font-bold text-emerald-400 mt-1">₹4.2M</div>
-                 </div>
-                 <div className="bg-[#12292e] p-6 rounded-2xl border border-teal-900/40 sm:col-span-3">
-                    <div className="text-xl font-bold mb-4">System Health</div>
-                    <div className="w-full bg-gray-800 rounded-full h-4 overflow-hidden border border-gray-700">
-                      <div className="bg-gradient-to-r from-teal-500 to-emerald-400 h-4 rounded-full" style={{ width: '98%' }}></div>
-                    </div>
-                    <div className="flex justify-between text-xs text-gray-400 mt-2 font-bold tracking-wider">
-                      <span>98% Server Uptime</span>
-                      <span>All servers operational</span>
-                    </div>
-                 </div>
-              </div>
+              
+              {loading || !stats ? (
+                <div className="text-center py-20 bg-[#12292e] border border-teal-900/40 rounded-2xl">
+                  <span className="w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin inline-block"></span>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                   <div className="bg-[#12292e] p-6 rounded-2xl border border-teal-900/40">
+                      <div className="text-4xl mb-3">👥</div>
+                      <div className="text-sm text-gray-400 font-semibold uppercase tracking-widest">Total Users</div>
+                      <div className="text-3xl font-bold text-white mt-1">{stats.totalUsers}</div>
+                   </div>
+                   <div className="bg-[#12292e] p-6 rounded-2xl border border-teal-900/40">
+                      <div className="text-4xl mb-3">🛠️</div>
+                      <div className="text-sm text-gray-400 font-semibold uppercase tracking-widest">Active Helpers</div>
+                      <div className="text-3xl font-bold text-teal-400 mt-1">{stats.activeHelpers}</div>
+                   </div>
+                   <div className="bg-[#12292e] p-6 rounded-2xl border border-teal-900/40">
+                      <div className="text-4xl mb-3">💸</div>
+                      <div className="text-sm text-gray-400 font-semibold uppercase tracking-widest">Total Payouts</div>
+                      <div className="text-3xl font-bold text-emerald-400 mt-1">₹{stats.totalPayouts}</div>
+                   </div>
+                   
+                   <div className="bg-[#12292e] p-6 rounded-2xl border border-teal-900/40">
+                      <div className="text-3xl mb-3">📋</div>
+                      <div className="text-sm text-gray-400 font-semibold uppercase tracking-widest">Total Bookings</div>
+                      <div className="text-2xl font-bold text-white mt-1">{stats.totalJobs}</div>
+                   </div>
+                   <div className="bg-[#12292e] p-6 rounded-2xl border border-emerald-900/40">
+                      <div className="text-3xl mb-3">✅</div>
+                      <div className="text-sm text-gray-400 font-semibold uppercase tracking-widest">Jobs Completed</div>
+                      <div className="text-2xl font-bold text-emerald-400 mt-1">{stats.completedJobs}</div>
+                   </div>
+                   <div className="bg-[#12292e] p-6 rounded-2xl border border-red-900/40">
+                      <div className="text-3xl mb-3">❌</div>
+                      <div className="text-sm text-gray-400 font-semibold uppercase tracking-widest">Jobs Cancelled</div>
+                      <div className="text-2xl font-bold text-red-400 mt-1">{stats.cancelledJobs}</div>
+                   </div>
+
+                   <div className="bg-[#12292e] p-6 rounded-2xl border border-teal-900/40 sm:col-span-3">
+                      <div className="text-xl font-bold mb-4">System Health</div>
+                      <div className="w-full bg-gray-800 rounded-full h-4 overflow-hidden border border-gray-700">
+                        <div className="bg-gradient-to-r from-teal-500 to-emerald-400 h-4 rounded-full" style={{ width: '98%' }}></div>
+                      </div>
+                      <div className="flex justify-between text-xs text-gray-400 mt-2 font-bold tracking-wider">
+                        <span>98% Server Uptime</span>
+                        <span>All servers operational</span>
+                      </div>
+                   </div>
+                </div>
+              )}
             </div>
           )}
 

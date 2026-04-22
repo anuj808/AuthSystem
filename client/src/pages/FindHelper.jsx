@@ -21,7 +21,14 @@ const FindHelper = () => {
   ]);
   const [newMessage, setNewMessage] = useState("");
 
+  const [isTimeout, setIsTimeout] = useState(false);
+  const [jobCompleted, setJobCompleted] = useState(false);
+  const [rating, setRating] = useState(5);
+  const [review, setReview] = useState("");
+  const [ratingSubmitted, setRatingSubmitted] = useState(false);
+
   const pollingIntervalRef = useRef(null);
+  const searchTimeoutRef = useRef(null);
   const textTimeoutRef = useRef(null);
 
   // 1. Create Job on Mount
@@ -49,23 +56,36 @@ const FindHelper = () => {
       setSearchText("Waiting for a helper to accept...");
     }, 4000);
 
+    // 1-minute timeout
+    searchTimeoutRef.current = setTimeout(() => {
+      setIsTimeout(true);
+    }, 60000);
+
     return () => {
       clearTimeout(textTimeoutRef.current);
+      clearTimeout(searchTimeoutRef.current);
       if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
     };
   }, [service, location]);
 
-  // 2. Poll for Acceptance
+  // 2. Poll for Acceptance & Completion
   useEffect(() => {
     if (!activeJobId) return;
 
     const checkStatus = async () => {
       try {
         const res = await axios.get(`${backendUrl}/api/jobs/status/${activeJobId}`);
-        if (res.data.success && res.data.job.status === "accepted") {
-          setHelperMatch(res.data.job);
-          setSearching(false);
-          clearInterval(pollingIntervalRef.current);
+        if (res.data.success) {
+          if (res.data.job.status === "accepted" && !helperMatch) {
+            setHelperMatch(res.data.job);
+            setSearching(false);
+            clearTimeout(searchTimeoutRef.current); // Stop timeout once accepted
+          } else if (res.data.job.status === "completed" && !jobCompleted) {
+            setHelperMatch(res.data.job);
+            setJobCompleted(true);
+            setSearching(false);
+            clearInterval(pollingIntervalRef.current);
+          }
         }
       } catch (err) {
         console.error("Polling error", err);
@@ -75,7 +95,7 @@ const FindHelper = () => {
     pollingIntervalRef.current = setInterval(checkStatus, 2000);
 
     return () => clearInterval(pollingIntervalRef.current);
-  }, [activeJobId]);
+  }, [activeJobId, helperMatch, jobCompleted]);
 
   const handleIncreaseFare = async () => {
     if (!activeJobId) return;
@@ -113,12 +133,26 @@ const FindHelper = () => {
     navigate("/");
   };
 
+  const handleRateJob = async (e) => {
+    e.preventDefault();
+    if (!activeJobId) return;
+    try {
+      const res = await axios.post(`${backendUrl}/api/jobs/rate/${activeJobId}`, { rating, review });
+      if (res.data.success) {
+        setRatingSubmitted(true);
+        setTimeout(() => navigate("/"), 2000);
+      }
+    } catch (err) {
+      console.error("Failed to rate job", err);
+    }
+  };
+
   return (
     <div className="pt-32 min-h-screen bg-[#0d1c1f] text-white px-4 pb-20">
       <div className="max-w-2xl mx-auto">
 
         {/* SEARCHING STATE */}
-        {searching && (
+        {searching && !isTimeout && (
           <div className="text-center bg-[#12292e] border border-teal-900/40 p-10 rounded-3xl shadow-2xl relative overflow-hidden">
             {/* Radar Animation */}
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-teal-500/5 rounded-full animate-ping pointer-events-none"></div>
@@ -164,8 +198,40 @@ const FindHelper = () => {
           </div>
         )}
 
+        {/* TIMEOUT STATE */}
+        {searching && isTimeout && (
+          <div className="text-center bg-[#12292e] border border-orange-900/40 p-10 rounded-3xl shadow-2xl">
+            <div className="w-24 h-24 rounded-full bg-orange-500/20 flex items-center justify-center text-4xl mx-auto mb-6 border border-orange-500/50">
+              ⏳
+            </div>
+            <h2 className="text-2xl font-bold text-orange-400 mb-4">No Helpers Available Nearby</h2>
+            <p className="text-gray-400 mb-8 max-w-md mx-auto">
+              It looks like all helpers are currently busy. You can either increase your offer to expand the search radius and incentivize helpers, or cancel the request.
+            </p>
+            
+            <div className="flex flex-col gap-4 max-w-sm mx-auto">
+              <button 
+                 onClick={() => {
+                   handleIncreaseFare();
+                   setIsTimeout(false);
+                   searchTimeoutRef.current = setTimeout(() => setIsTimeout(true), 60000);
+                 }}
+                 className="w-full bg-orange-500/20 text-orange-400 border border-orange-500/50 hover:bg-orange-500 hover:text-[#0d1c1f] transition font-bold py-3 rounded-xl flex items-center justify-center gap-2"
+               >
+                 <span>💸</span> Increase Offer (+₹50) & Try Again
+               </button>
+               <button
+                onClick={cancelSearch}
+                className="w-full px-8 py-3 rounded-xl border border-red-500/50 text-red-400 hover:bg-red-500 hover:text-white transition font-bold"
+              >
+                Cancel Request
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* SUCCESS MATCH STATE (Uber/Rapido style map) */}
-        {!searching && helperMatch && (
+        {!searching && helperMatch && !jobCompleted && (
           <div className="animate-fadeIn">
             <div className="bg-emerald-500/10 border border-emerald-500/40 p-4 rounded-xl text-center mb-6 shadow-[0_0_20px_rgba(16,185,129,0.15)] flex flex-col md:flex-row items-center justify-center gap-4">
               <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center text-2xl animate-bounce">
@@ -270,6 +336,60 @@ const FindHelper = () => {
                      </button>
                   </div>
                </div>
+            </div>
+          </div>
+        )}
+
+        {/* COMPLETED STATE */}
+        {jobCompleted && (
+          <div className="animate-fadeIn">
+            <div className="bg-emerald-500/10 border border-emerald-500/40 p-8 rounded-3xl text-center mb-6 shadow-2xl">
+              <div className="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center text-4xl mx-auto mb-6 border border-emerald-500/50">
+                🎉
+              </div>
+              <h2 className="text-3xl font-bold text-emerald-400 mb-2">Work Completed!</h2>
+              <p className="text-gray-300 mb-8">Please pay the helper directly.</p>
+              
+              <div className="bg-[#12292e] rounded-2xl p-6 border border-teal-900/50 mb-8 max-w-sm mx-auto">
+                <div className="text-gray-400 text-sm mb-1">Total Amount Due</div>
+                <div className="text-5xl font-bold text-emerald-400 mb-4">₹{helperMatch.price}</div>
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-300">
+                  <span>💳</span> Pay via Cash or UPI to {helperMatch.helperName}
+                </div>
+              </div>
+
+              {!ratingSubmitted ? (
+                <div className="bg-[#12292e] rounded-2xl p-6 border border-teal-900/50 max-w-md mx-auto">
+                  <h3 className="text-lg font-bold text-teal-400 mb-4">Rate your experience</h3>
+                  <form onSubmit={handleRateJob} className="flex flex-col gap-4">
+                    <div className="flex justify-center gap-2 text-3xl">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button 
+                          key={star} 
+                          type="button" 
+                          onClick={() => setRating(star)}
+                          className={star <= rating ? "text-yellow-400" : "text-gray-600"}
+                        >
+                          ★
+                        </button>
+                      ))}
+                    </div>
+                    <textarea 
+                      value={review}
+                      onChange={(e) => setReview(e.target.value)}
+                      placeholder="Leave a compliment or feedback (optional)" 
+                      className="bg-[#0d1c1f] text-white p-3 rounded-xl border border-teal-900/50 outline-none focus:border-teal-500 min-h-[80px] text-sm"
+                    />
+                    <button type="submit" className="bg-teal-500 text-[#0d1c1f] font-bold py-3 rounded-xl hover:bg-teal-400 transition shadow-lg">
+                      Submit Rating
+                    </button>
+                  </form>
+                </div>
+              ) : (
+                <div className="bg-teal-500/20 border border-teal-500/50 p-4 rounded-xl text-teal-400 font-bold">
+                  Thank you for your feedback! Redirecting...
+                </div>
+              )}
             </div>
           </div>
         )}

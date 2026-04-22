@@ -100,3 +100,37 @@ export const cancelJob = async (req, res) => {
   }
 };
 
+// Complete job (from helper)
+export const completeJob = async (req, res) => {
+  try {
+    const job = await Job.findById(req.params.id);
+    if (!job) return res.status(404).json({ success: false, message: "Job not found" });
+    if (job.status !== "accepted") return res.status(400).json({ success: false, message: "Only accepted jobs can be completed" });
+    
+    job.status = "completed";
+    await job.save();
+    
+    res.json({ success: true, job });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Rate job (from user)
+export const rateJob = async (req, res) => {
+  try {
+    const { rating, review } = req.body;
+    const job = await Job.findById(req.params.id);
+    if (!job) return res.status(404).json({ success: false, message: "Job not found" });
+    if (job.status !== "completed") return res.status(400).json({ success: false, message: "Only completed jobs can be rated" });
+    
+    job.rating = rating;
+    job.review = review;
+    await job.save();
+    
+    res.json({ success: true, job });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+

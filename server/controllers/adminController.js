@@ -1,6 +1,7 @@
 import Helper from "../models/Helper.js";
 import userModel from "../models/userModel.js";
 import Contact from "../models/Contact.js";
+import Job from "../models/Job.js";
 
 // Get pending helpers
 export const getPendingHelpers = async (req, res) => {
@@ -48,6 +49,37 @@ export const getContacts = async (req, res) => {
   try {
     const contacts = await Contact.find().sort({ createdAt: -1 });
     res.json({ success: true, contacts });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Get stats
+export const getStats = async (req, res) => {
+  try {
+    const totalUsers = await userModel.countDocuments();
+    const activeHelpers = await Helper.countDocuments({ isVerified: true });
+    
+    // Calculate jobs
+    const completedJobs = await Job.countDocuments({ status: "completed" });
+    const cancelledJobs = await Job.countDocuments({ status: "cancelled" });
+    const totalJobs = await Job.countDocuments();
+
+    // Sum payouts (from completed jobs)
+    const jobs = await Job.find({ status: "completed" });
+    const totalPayouts = jobs.reduce((sum, job) => sum + (job.price || 0), 0);
+
+    res.json({
+      success: true,
+      stats: {
+        totalUsers,
+        activeHelpers,
+        totalJobs,
+        completedJobs,
+        cancelledJobs,
+        totalPayouts
+      }
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

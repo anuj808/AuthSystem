@@ -11,6 +11,8 @@ const jobSchema = new mongoose.Schema(
     status: { type: String, enum: ["pending", "accepted", "completed", "cancelled"], default: "pending" },
     helperId: { type: mongoose.Schema.Types.ObjectId, ref: "Helper", default: null },
     helperName: { type: String, default: "" },
+    rating: { type: Number, default: null },
+    review: { type: String, default: "" },
   },
   { timestamps: true }
 );

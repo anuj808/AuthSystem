@@ -96,8 +96,23 @@ const HelperDashboard = () => {
     }, 2500);
   };
 
-  // Filter out declined jobs immediately
-  const displayRequests = requests.filter(req => !declinedJobs.includes(req.id));
+  const handleCompleteWork = async (id) => {
+    try {
+      const res = await axios.put(`${backendUrl}/api/jobs/complete/${id}`);
+      if (res.data.success) {
+        setRequests(requests.map(req => 
+          req.id === id ? { ...req, status: "completed" } : req
+        ));
+        toast.success("Work marked as completed!");
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to complete job");
+    }
+  };
+
+  // Filter out declined jobs immediately, and also completed jobs if you want, but we can show them or just remove them
+  const displayRequests = requests.filter(req => !declinedJobs.includes(req.id) && req.status !== "completed");
+
 
   return (
     <div className="pt-32 min-h-screen bg-[#0d1c1f] text-white px-4 pb-12">
@@ -282,7 +297,7 @@ const HelperDashboard = () => {
 
                        {/* Controls Area */}
                        <div className="p-5">
-                          <div className="grid grid-cols-2 gap-4 mb-2">
+                          <div className="grid grid-cols-2 gap-4 mb-4">
                              <button className="flex items-center justify-center gap-2 bg-teal-500/10 text-teal-400 border border-teal-500/30 py-2.5 rounded-xl hover:bg-teal-500 hover:text-[#0d1c1f] transition font-bold text-sm">
                                 📞 Call User
                              </button>
@@ -290,6 +305,12 @@ const HelperDashboard = () => {
                                 💬 {activeChatId ? "Close Chat" : "Message"}
                              </button>
                           </div>
+                          <button 
+                            onClick={() => handleCompleteWork(req.id)}
+                            className="w-full bg-emerald-500 text-[#0d1c1f] font-bold py-3 rounded-xl hover:bg-emerald-400 transition transform hover:-translate-y-0.5 shadow-lg"
+                          >
+                            ✅ Mark Work as Completed & Collect Payment
+                          </button>
                        </div>
                     </div>
                   </div>
