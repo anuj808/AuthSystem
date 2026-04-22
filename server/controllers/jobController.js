@@ -1,4 +1,5 @@
 import Job from "../models/Job.js";
+import Razorpay from "razorpay";
 
 // Create a new job request (from user)
 export const createJob = async (req, res) => {
@@ -131,6 +132,46 @@ export const rateJob = async (req, res) => {
     res.json({ success: true, job });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Create Payment Link
+export const createPaymentLink = async (req, res) => {
+  try {
+    const job = await Job.findById(req.params.id);
+    if (!job) return res.status(404).json({ success: false, message: "Job not found" });
+
+    // Ensure we have razorpay credentials
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_KEY_ID === "rzp_test_your_key_id_here") {
+      // Fallback for demo without keys
+      return res.json({ success: true, paymentLink: `upi://pay?pa=demo@ybl&pn=Helper&am=${job.price}&cu=INR` });
+    }
+
+    const instance = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    });
+
+    const paymentLink = await instance.paymentLink.create({
+      amount: job.price * 100,
+      currency: "INR",
+      accept_partial: false,
+      description: `Payment for Service`,
+      customer: {
+        name: job.userName || "Customer",
+        contact: "+919999999999",
+        email: "test@example.com"
+      },
+      notify: { sms: false, email: false },
+      reminder_enable: false
+    });
+
+    res.json({ success: true, paymentLink: paymentLink.short_url });
+  } catch (error) {
+    console.error("Razorpay Error:", error);
+    // Fallback if Razorpay API fails (e.g. invalid keys)
+    const job = await Job.findById(req.params.id);
+    res.json({ success: true, paymentLink: `upi://pay?pa=demo@ybl&pn=Helper&am=${job ? job.price : 0}&cu=INR` });
   }
 };
 

@@ -1,5 +1,5 @@
 import express from "express";
-import { createJob, getJobStatus, getAvailableJobs, acceptJob, increaseFare, cancelJob, completeJob, rateJob } from "../controllers/jobController.js";
+import { createJob, getJobStatus, getAvailableJobs, acceptJob, increaseFare, cancelJob, completeJob, rateJob, createPaymentLink } from "../controllers/jobController.js";
 
 const router = express.Router();
 
@@ -11,5 +11,6 @@ router.put("/increase/:id", increaseFare);
 router.put("/cancel/:id", cancelJob);
 router.put("/complete/:id", completeJob);
 router.post("/rate/:id", rateJob);
+router.post("/payment-link/:id", createPaymentLink);
 
 export default router;

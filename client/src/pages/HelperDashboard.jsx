@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { QRCodeSVG } from 'qrcode.react';
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL.replace(/\/+$/, "");
 
@@ -16,6 +17,8 @@ const HelperDashboard = () => {
     { sender: "user", text: "Please come quickly, it's urgent!" }
   ]);
   const [newMessage, setNewMessage] = useState("");
+  
+  const [qrData, setQrData] = useState({ jobId: null, link: null });
 
   // Poll for live jobs when online
   useEffect(() => {
@@ -35,10 +38,17 @@ const HelperDashboard = () => {
               status: job.status,
               price: job.price
             }));
+            // Preserve accepted jobs from current state so they don't disappear
+            const activeJobs = requests.filter(r => r.status === "accepted");
+            const activeJobIds = activeJobs.map(r => r.id);
             
+            const pendingJobs = newRequests.filter(r => !activeJobIds.includes(r.id));
+            const mergedRequests = [...activeJobs, ...pendingJobs];
+
             // Just for the cool "Uber Ringing" effect, alert when a new job appears
-            if (newRequests.length > requests.length) {
-                const latestJob = newRequests[0];
+            const currentPendingCount = requests.filter(r => r.status === "pending").length;
+            if (pendingJobs.length > currentPendingCount) {
+                const latestJob = pendingJobs[0];
                 if (latestJob && latestJob.id !== ringingJobId) {
                    setRingingJobId(latestJob.id);
                    const audio = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
@@ -46,7 +56,7 @@ const HelperDashboard = () => {
                 }
             }
 
-            setRequests(newRequests);
+            setRequests(mergedRequests);
           }
         } catch (err) {
           console.error("Error fetching jobs", err);
@@ -57,7 +67,7 @@ const HelperDashboard = () => {
     }
     
     return () => clearInterval(pollingInterval);
-  }, [isOnline, requests.length, ringingJobId]);
+  }, [isOnline, requests, ringingJobId]);
 
   const handleAccept = async (id, price) => {
     try {
@@ -98,20 +108,35 @@ const HelperDashboard = () => {
 
   const handleCompleteWork = async (id) => {
     try {
+      // First generate payment link
+      const paymentRes = await axios.post(`${backendUrl}/api/jobs/payment-link/${id}`);
+      if (paymentRes.data.success) {
+        setQrData({ jobId: id, link: paymentRes.data.paymentLink });
+      }
+
       const res = await axios.put(`${backendUrl}/api/jobs/complete/${id}`);
       if (res.data.success) {
         setRequests(requests.map(req => 
           req.id === id ? { ...req, status: "completed" } : req
         ));
-        toast.success("Work marked as completed!");
+        toast.success("Work marked as completed! Show QR to collect payment.");
       }
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to complete job");
     }
   };
 
-  // Filter out declined jobs immediately, and also completed jobs if you want, but we can show them or just remove them
-  const displayRequests = requests.filter(req => !declinedJobs.includes(req.id) && req.status !== "completed");
+  // Keep completed jobs locally if they have a QR showing
+  const displayRequests = requests.filter(req => 
+    !declinedJobs.includes(req.id) && 
+    (req.status !== "completed" || qrData.jobId === req.id)
+  );
+
+  const activeJobs = displayRequests.filter(r => r.status === 'accepted' || qrData.jobId === r.id);
+  const pendingJobs = displayRequests.filter(r => r.status === 'pending');
+
+  const mainListJobs = activeJobs.length > 0 ? activeJobs : pendingJobs;
+  const floatingJobs = activeJobs.length > 0 ? pendingJobs.slice(0, 3) : [];
 
 
   return (
@@ -180,12 +205,12 @@ const HelperDashboard = () => {
                {isOnline && <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span>}
             </h2>
             <div className="bg-[#0d1c1f] border border-teal-900/40 px-4 py-2 rounded-full text-sm text-gray-300 font-bold">
-              {displayRequests.filter(r => r.status === 'pending').length} Active Calls
+              {pendingJobs.length} Active Calls
             </div>
           </div>
           
           <div className="space-y-5 relative">
-            {displayRequests.map(req => (
+            {mainListJobs.map(req => (
               <div 
                 key={req.id} 
                 className={`p-6 rounded-2xl border transition-all duration-300 transform ${
@@ -297,20 +322,41 @@ const HelperDashboard = () => {
 
                        {/* Controls Area */}
                        <div className="p-5">
-                          <div className="grid grid-cols-2 gap-4 mb-4">
-                             <button className="flex items-center justify-center gap-2 bg-teal-500/10 text-teal-400 border border-teal-500/30 py-2.5 rounded-xl hover:bg-teal-500 hover:text-[#0d1c1f] transition font-bold text-sm">
-                                📞 Call User
-                             </button>
-                             <button onClick={() => setActiveChatId(activeChatId ? null : req.id)} className="flex items-center justify-center gap-2 bg-gray-800 text-gray-300 hover:bg-gray-700 py-2.5 rounded-xl transition font-medium text-sm">
-                                💬 {activeChatId ? "Close Chat" : "Message"}
-                             </button>
-                          </div>
-                          <button 
-                            onClick={() => handleCompleteWork(req.id)}
-                            className="w-full bg-emerald-500 text-[#0d1c1f] font-bold py-3 rounded-xl hover:bg-emerald-400 transition transform hover:-translate-y-0.5 shadow-lg"
-                          >
-                            ✅ Mark Work as Completed & Collect Payment
-                          </button>
+                          {qrData.jobId === req.id ? (
+                             <div className="bg-[#12292e] rounded-2xl p-6 border border-emerald-500/50 text-center animate-fadeIn shadow-2xl">
+                               <h3 className="text-xl font-bold text-emerald-400 mb-2">Scan to Pay</h3>
+                               <p className="text-gray-300 text-sm mb-4">Show this QR code to the user to collect ₹{req.price}</p>
+                               <div className="bg-white p-4 rounded-xl inline-block mx-auto">
+                                  <QRCodeSVG value={qrData.link} size={180} />
+                               </div>
+                               <button 
+                                  onClick={() => {
+                                     setQrData({ jobId: null, link: null });
+                                     setRequests(requests.filter(r => r.id !== req.id));
+                                  }}
+                                  className="mt-6 w-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 font-bold py-3 rounded-xl hover:bg-emerald-500 hover:text-[#0d1c1f] transition shadow-lg"
+                               >
+                                  ✅ Payment Received - Close Window
+                               </button>
+                             </div>
+                          ) : (
+                             <>
+                                <div className="grid grid-cols-2 gap-4 mb-4">
+                                   <button className="flex items-center justify-center gap-2 bg-teal-500/10 text-teal-400 border border-teal-500/30 py-2.5 rounded-xl hover:bg-teal-500 hover:text-[#0d1c1f] transition font-bold text-sm">
+                                      📞 Call User
+                                   </button>
+                                   <button onClick={() => setActiveChatId(activeChatId ? null : req.id)} className="flex items-center justify-center gap-2 bg-gray-800 text-gray-300 hover:bg-gray-700 py-2.5 rounded-xl transition font-medium text-sm">
+                                      💬 {activeChatId ? "Close Chat" : "Message"}
+                                   </button>
+                                </div>
+                                <button 
+                                  onClick={() => handleCompleteWork(req.id)}
+                                  className="w-full bg-emerald-500 text-[#0d1c1f] font-bold py-3 rounded-xl hover:bg-emerald-400 transition transform hover:-translate-y-0.5 shadow-lg"
+                                >
+                                  ✅ Mark Work as Completed & Collect Payment
+                                </button>
+                             </>
+                          )}
                        </div>
                     </div>
                   </div>
@@ -318,7 +364,7 @@ const HelperDashboard = () => {
               </div>
             ))}
 
-            {displayRequests.length === 0 && (
+            {mainListJobs.length === 0 && (
               <div className="text-center bg-[#12292e] border border-teal-900/40 rounded-3xl p-12 mt-4 shadow-inner relative overflow-hidden">
                  {isOnline && <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 animate-pulse"></div>}
                  
@@ -341,6 +387,31 @@ const HelperDashboard = () => {
             )}
           </div>
         </div>
+
+        {/* Floating Notifications for Pending Jobs (Rapido Style) */}
+        {floatingJobs.length > 0 && (
+          <div className="fixed top-28 right-4 z-50 flex flex-col gap-3 w-80 max-w-[calc(100vw-2rem)]">
+            {floatingJobs.map(job => (
+              <div key={job.id} className="bg-[#12292e]/95 backdrop-blur-md border-l-4 border-l-teal-500 border-t border-b border-r border-teal-900/50 shadow-2xl rounded-r-xl rounded-l-sm p-4 transform transition-all hover:scale-[1.02]">
+                <div className="flex justify-between items-start">
+                   <div>
+                     <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded font-bold animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.5)]">NEW RIDE</span>
+                     <h4 className="text-white font-bold mt-1.5">{job.service}</h4>
+                     <p className="text-gray-400 text-xs truncate max-w-[160px] mt-0.5">{job.location}</p>
+                   </div>
+                   <div className="text-right">
+                     <span className="text-emerald-400 font-bold text-lg">₹{job.price}</span>
+                     <p className="text-teal-400 text-[10px] font-medium mt-0.5">📍 {job.distance}</p>
+                   </div>
+                </div>
+                <div className="flex gap-2 mt-4">
+                   <button onClick={() => handleAccept(job.id, job.price)} className="flex-[2] bg-teal-500 text-[#0d1c1f] text-xs font-bold py-2.5 rounded-lg hover:bg-teal-400 transition shadow-[0_0_15px_rgba(20,184,166,0.2)]">Accept Job</button>
+                   <button onClick={() => handleDecline(job.id)} className="flex-1 bg-[#0d1c1f] border border-gray-700 text-gray-400 text-xs font-bold py-2.5 rounded-lg hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 transition">Decline</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
       </div>
     </div>
